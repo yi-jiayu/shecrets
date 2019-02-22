@@ -1,7 +1,6 @@
 extern crate toml;
 
 use std::io::{self, Read};
-use std::collections::VecDeque;
 use toml::Value as Value;
 use toml::value::Table as Table;
 
@@ -11,16 +10,16 @@ struct Var<'a> {
 }
 
 fn walk(config: &Table) -> Vec<Var> {
-    let mut queue: VecDeque<(Vec<&str>, &Table)> = VecDeque::new();
+    let mut queue: Vec<(Vec<&str>, &Table)> = Vec::new();
     let mut vars: Vec<Var> = Vec::new();
-    queue.push_back((Vec::new(), config));
-    while let Some((prefix, value)) = queue.pop_front() {
+    queue.push((Vec::new(), config));
+    while let Some((prefix, value)) = queue.pop() {
         for (k, v) in value {
             let mut prefix = prefix.to_owned();
             prefix.push(&k);
             match v {
                 Value::String(s) => vars.push(Var { key: prefix, value: s.as_str() }),
-                Value::Table(t) => queue.push_back((prefix, t)),
+                Value::Table(t) => queue.push((prefix, t)),
                 _ => ()
             };
         };
@@ -59,14 +58,17 @@ mod tests {
 nestedvar = "value2"
 [section.nested]
 doublynestedvar = "value3"
+[section2]
+nestedvar = "value4"
 "#.parse::<Value>().unwrap();
         let vars = walk(config.as_table().unwrap());
         let formatted = format_vars(vars);
         assert_eq!(formatted,
                    [
                        "SOMEVAR=value1; export SOMEVAR",
+                       "SECTION2_NESTEDVAR=value4; export SECTION2_NESTEDVAR",
                        "SECTION_NESTEDVAR=value2; export SECTION_NESTEDVAR",
-                       "SECTION_NESTED_DOUBLYNESTEDVAR=value3; export SECTION_NESTED_DOUBLYNESTEDVAR"
+                       "SECTION_NESTED_DOUBLYNESTEDVAR=value3; export SECTION_NESTED_DOUBLYNESTEDVAR",
                    ]);
     }
 }

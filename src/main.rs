@@ -5,16 +5,21 @@ use std::collections::VecDeque;
 use toml::Value as Value;
 use toml::value::Table as Table;
 
-fn walk(config: &Table) -> Vec<(Vec<&str>, &str)> {
+struct Var<'a> {
+    key: Vec<&'a str>,
+    value: &'a str,
+}
+
+fn walk(config: &Table) -> Vec<Var> {
     let mut queue: VecDeque<(Vec<&str>, &Table)> = VecDeque::new();
-    let mut vars: Vec<(Vec<&str>, &str)> = Vec::new();
+    let mut vars: Vec<Var> = Vec::new();
     queue.push_back((Vec::new(), config));
     while let Some((prefix, value)) = queue.pop_front() {
         for (k, v) in value {
             let mut prefix = prefix.to_owned();
             prefix.push(&k);
             match v {
-                Value::String(s) => vars.push((prefix, s.as_str())),
+                Value::String(s) => vars.push(Var { key: prefix, value: s.as_str() }),
                 Value::Table(t) => queue.push_back((prefix, t)),
                 _ => ()
             };
@@ -23,11 +28,11 @@ fn walk(config: &Table) -> Vec<(Vec<&str>, &str)> {
     vars
 }
 
-fn format_vars(vars: Vec<(Vec<&str>, &str)>) -> Vec<String> {
+fn format_vars(vars: Vec<Var>) -> Vec<String> {
     vars.iter()
-        .map(|(ks, v)| format!("{0}={1}; export {0}",
-                               ks.join("_").to_uppercase(),
-                               v))
+        .map(|var| format!("{0}={1}; export {0}",
+                           var.key.join("_").to_uppercase(),
+                           var.value))
         .collect()
 }
 

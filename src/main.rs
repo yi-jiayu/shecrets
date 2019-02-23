@@ -42,16 +42,26 @@ fn format_vars(vars: &Vec<Var>) -> Vec<String> {
         .collect()
 }
 
-fn main() -> io::Result<()> {
+fn die(msg: &str) {
+    eprintln!("{}", msg);
+    std::process::exit(1);
+}
+
+fn main() {
     let mut buffer = String::new();
-    io::stdin().read_to_string(&mut buffer)?;
-    let val = buffer.parse::<Value>().unwrap();
+    if io::stdin().read_to_string(&mut buffer).is_err() {
+        return die("shecrets: error reading standard input");
+    }
+    let val = match buffer.parse::<Value>() {
+        Ok(val) => val,
+        Err(_) => return die("shecrets: invalid toml"),
+    };
+    // valid toml should always be a table at the top level
     let vars = walk(val.as_table().unwrap());
     let formatted = format_vars(&vars);
     for s in formatted {
         println!("{}", s);
     };
-    Ok(())
 }
 
 #[cfg(test)]

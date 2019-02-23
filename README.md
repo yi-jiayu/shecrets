@@ -15,7 +15,7 @@ TRAVIS_TOKEN = "secrettravistoken"
 	account_key = "secretaccountkey"
 
 [pipenv]
-	venv_in_project = "1"
+	venv_in_project = 1
 ```
 
 `shecrets` will output:
@@ -23,13 +23,13 @@ TRAVIS_TOKEN = "secrettravistoken"
 ```console
 $ shecrets < .shecrets.toml
 TRAVIS_TOKEN=secrettravistoken; export TRAVIS_TOKEN
-DATAMALL_ACCOUNT_KEY=secretaccountkey; export DATAMALL_ACCOUNT_KEY
 PIPENV_VENV_IN_PROJECT=1; export PIPENV_VENV_IN_PROJECT
+DATAMALL_ACCOUNT_KEY=secretaccountkey; export DATAMALL_ACCOUNT_KEY
 ```
 
 The output of `shecrets` can be `eval`ed inside your shell startup script:
 
 ```sh
-eval $(secrets < $HOME/.shecrets.toml)
+eval "$(shecrets < $HOME/.shecrets.toml)"
 ```
 

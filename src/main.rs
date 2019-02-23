@@ -10,16 +10,16 @@ struct Var<'a> {
 }
 
 fn walk(config: &Table) -> Vec<Var> {
-    let mut queue: Vec<(Vec<&str>, &Table)> = Vec::new();
+    let mut stack: Vec<(Vec<&str>, &Table)> = Vec::new();
     let mut vars: Vec<Var> = Vec::new();
-    queue.push((Vec::new(), config));
-    while let Some((prefix, value)) = queue.pop() {
+    stack.push((Vec::new(), config));
+    while let Some((prefix, value)) = stack.pop() {
         for (k, v) in value {
             let mut prefix = prefix.to_owned();
             prefix.push(&k);
             match v {
                 Value::String(s) => vars.push(Var { key: prefix, value: s.as_str() }),
-                Value::Table(t) => queue.push((prefix, t)),
+                Value::Table(t) => stack.push((prefix, t)),
                 _ => ()
             };
         };
@@ -27,7 +27,7 @@ fn walk(config: &Table) -> Vec<Var> {
     vars
 }
 
-fn format_vars(vars: Vec<Var>) -> Vec<String> {
+fn format_vars(vars: &Vec<Var>) -> Vec<String> {
     vars.iter()
         .map(|var| format!("{0}={1}; export {0}",
                            var.key.join("_").to_uppercase(),
@@ -40,7 +40,7 @@ fn main() -> io::Result<()> {
     io::stdin().read_to_string(&mut buffer)?;
     let val = buffer.parse::<Value>().unwrap();
     let vars = walk(val.as_table().unwrap());
-    let formatted = format_vars(vars);
+    let formatted = format_vars(&vars);
     for s in formatted {
         println!("{}", s);
     };
@@ -62,7 +62,7 @@ doublynestedvar = "value3"
 nestedvar = "value4"
 "#.parse::<Value>().unwrap();
         let vars = walk(config.as_table().unwrap());
-        let formatted = format_vars(vars);
+        let formatted = format_vars(&vars);
         assert_eq!(formatted,
                    [
                        "SOMEVAR=value1; export SOMEVAR",

@@ -30,11 +30,15 @@ fn walk(config: &Table) -> Vec<Var> {
     vars
 }
 
+fn format_posix(var: &Var) -> String {
+    format!("{0}={1}; export {0}",
+            var.key.join("_").to_uppercase(),
+            var.value)
+}
+
 fn format_vars(vars: &Vec<Var>) -> Vec<String> {
     vars.iter()
-        .map(|var| format!("{0}={1}; export {0}",
-                           var.key.join("_").to_uppercase(),
-                           var.value))
+        .map(|var| format_posix(var))
         .collect()
 }
 
@@ -53,6 +57,17 @@ fn main() -> io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_format_posix() {
+        let var = Var {
+            key: vec!["pipenv", "venv_in_project"],
+            value: Box::new(1),
+        };
+        let actual = format_posix(&var);
+        let expected = "PIPENV_VENV_IN_PROJECT=1; export PIPENV_VENV_IN_PROJECT";
+        assert_eq!(expected, actual);
+    }
 
     #[test]
     fn test() {

@@ -22,6 +22,7 @@ fn walk(config: &Table) -> Vec<Var> {
                 Value::String(s) => vars.push(Var { key: prefix, value: Box::new(s.as_str()) }),
                 Value::Integer(i) => vars.push(Var { key: prefix, value: Box::new(i) }),
                 Value::Float(f) => vars.push(Var { key: prefix, value: Box::new(f) }),
+                Value::Boolean(b) => vars.push(Var { key: prefix, value: Box::new(b) }),
                 Value::Table(t) => stack.push((prefix, t)),
                 _ => ()
             };
@@ -83,6 +84,7 @@ mod tests {
     fn test() {
         let config = r#"somefloatvar = 1.2
 someintvar = 1
+someboolval = true
 [section]
 nestedvar = "value2"
 [section.nested]
@@ -94,6 +96,7 @@ nestedvar = "value4"
         let formatted = format_vars(&vars);
         assert_eq!(formatted,
                    [
+                       "SOMEBOOLVAL=true; export SOMEBOOLVAL",
                        "SOMEFLOATVAR=1.2; export SOMEFLOATVAR",
                        "SOMEINTVAR=1; export SOMEINTVAR",
                        "SECTION2_NESTEDVAR=value4; export SECTION2_NESTEDVAR",

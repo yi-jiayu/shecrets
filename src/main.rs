@@ -1,12 +1,13 @@
 extern crate toml;
 
+use std::fmt::Display;
 use std::io::{self, Read};
 use toml::Value as Value;
 use toml::value::Table as Table;
 
 struct Var<'a> {
     key: Vec<&'a str>,
-    value: &'a str,
+    value: Box<Display + 'a>,
 }
 
 fn walk(config: &Table) -> Vec<Var> {
@@ -18,7 +19,9 @@ fn walk(config: &Table) -> Vec<Var> {
             let mut prefix = prefix.to_owned();
             prefix.push(&k);
             match v {
-                Value::String(s) => vars.push(Var { key: prefix, value: s.as_str() }),
+                Value::String(s) => vars.push(Var { key: prefix, value: Box::new(s.as_str()) }),
+                Value::Integer(i) => vars.push(Var { key: prefix, value: Box::new(i) }),
+                Value::Float(f) => vars.push(Var { key: prefix, value: Box::new(f) }),
                 Value::Table(t) => stack.push((prefix, t)),
                 _ => ()
             };
@@ -53,7 +56,8 @@ mod tests {
 
     #[test]
     fn test() {
-        let config = r#"somevar = "value1"
+        let config = r#"somefloatvar = 1.2
+someintvar = 1
 [section]
 nestedvar = "value2"
 [section.nested]
@@ -65,7 +69,8 @@ nestedvar = "value4"
         let formatted = format_vars(&vars);
         assert_eq!(formatted,
                    [
-                       "SOMEVAR=value1; export SOMEVAR",
+                       "SOMEFLOATVAR=1.2; export SOMEFLOATVAR",
+                       "SOMEINTVAR=1; export SOMEINTVAR",
                        "SECTION2_NESTEDVAR=value4; export SECTION2_NESTEDVAR",
                        "SECTION_NESTEDVAR=value2; export SECTION_NESTEDVAR",
                        "SECTION_NESTED_DOUBLYNESTEDVAR=value3; export SECTION_NESTED_DOUBLYNESTEDVAR",

@@ -32,4 +32,3 @@ The output of `shecrets` can be `eval`ed inside your shell startup script:
 ```sh
 eval "$(shecrets < $HOME/.shecrets.toml)"
 ```
-

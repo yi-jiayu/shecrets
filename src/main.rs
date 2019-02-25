@@ -1,13 +1,42 @@
 extern crate toml;
 
-use std::fmt::Display;
+use std::fmt::{Display, Error, Formatter};
 use std::io::{self, Read};
-use toml::value::Table;
+use toml::value::{Array, Table};
 use toml::Value;
+
+const DEFAULT_ARRAY_SEP: &str = ":";
 
 struct Var<'a> {
     key: Vec<&'a str>,
     value: Box<Display + 'a>,
+}
+
+#[derive(Debug, PartialEq)]
+struct ArrayValue<'a> {
+    sep: &'a str,
+    elems: Vec<&'a str>,
+}
+
+impl<'a> ArrayValue<'a> {
+    pub fn from_array(array: &'a Array, sep: &'a str) -> Option<ArrayValue<'a>> {
+        array
+            .first()
+            .and_then(|val| {
+                if val.is_str() {
+                    Some(array.iter().map(|v| v.as_str().unwrap()).collect())
+                } else {
+                    None
+                }
+            })
+            .map(|elems| ArrayValue { sep, elems })
+    }
+}
+
+impl<'a> Display for ArrayValue<'a> {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        write!(f, "{}", self.elems.join(self.sep))
+    }
 }
 
 fn walk(config: &Table) -> Vec<Var> {
@@ -35,6 +64,14 @@ fn walk(config: &Table) -> Vec<Var> {
                     key: prefix,
                     value: Box::new(b),
                 }),
+                Value::Array(a) => {
+                    ArrayValue::from_array(a, DEFAULT_ARRAY_SEP).map(|av| {
+                        vars.push(Var {
+                            key: prefix,
+                            value: Box::new(av),
+                        })
+                    });
+                }
                 Value::Table(t) => stack.push((prefix, t)),
                 _ => (),
             };
@@ -88,10 +125,34 @@ mod tests {
     }
 
     #[test]
+    fn test_array_value_display() {
+        let arr = ArrayValue {
+            sep: "X",
+            elems: vec!["/bin", "/usr/bin", "/usr/local/bin"],
+        };
+        let actual = format!("{}", arr);
+        let expected = "/binX/usr/binX/usr/local/bin";
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_array_value_from_array() {
+        let val = r#"arr = ["/bin", "/usr/bin", "/usr/local/bin"]"#.parse::<Value>().unwrap();
+        let arr = val.get("arr").unwrap().as_array().unwrap();
+        let actual = ArrayValue::from_array(arr, DEFAULT_ARRAY_SEP).unwrap();
+        let expected = ArrayValue {
+            sep: ":",
+            elems: vec!["/bin", "/usr/bin", "/usr/local/bin"],
+        };
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
     fn test() {
         let config = r#"somefloatvar = 1.2
 someintvar = 1
 someboolval = true
+somearrayval = ["abc","def"]
 [section]
 nestedvar = "value2"
 [section.nested]
@@ -106,6 +167,7 @@ nestedvar = "value4"
         assert_eq!(
             formatted,
             [
+                "SOMEARRAYVAL=abc:def; export SOMEARRAYVAL",
                 "SOMEBOOLVAL=true; export SOMEBOOLVAL",
                 "SOMEFLOATVAR=1.2; export SOMEFLOATVAR",
                 "SOMEINTVAR=1; export SOMEINTVAR",

@@ -1,0 +1,29 @@
+.Dd Feb 25, 2019
+.Dt SHECRETS 1
+.Os
+.Sh NAME
+.Nm shecrets
+.Nd export shell variables from a config file
+.Sh SYNOPSIS
+.Nm
+.Sh DESCRIPTION
+Reads a TOML file from stdin and writes export commands to stdout.
+.Sh EXAMPLES
+Given a TOML file with the following content:
+.Bd -literal -offset indent
+TRAVIS_TOKEN = \(dqsecrettravistoken\(dq
+
+[datamall]
+	account_key = \(dqsecretaccountkey\(dq
+
+[pipenv]
+	venv_in_project = 1
+.Ed
+
+.Nm
+will output:
+.Bd -literal -offset indent
+TRAVIS_TOKEN=secrettravistoken; export TRAVIS_TOKEN
+PIPENV_VENV_IN_PROJECT=1; export PIPENV_VENV_IN_PROJECT
+DATAMALL_ACCOUNT_KEY=secretaccountkey; export DATAMALL_ACCOUNT_KEY
+.Ed

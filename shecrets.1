@@ -27,3 +27,8 @@ TRAVIS_TOKEN=secrettravistoken; export TRAVIS_TOKEN
 PIPENV_VENV_IN_PROJECT=1; export PIPENV_VENV_IN_PROJECT
 DATAMALL_ACCOUNT_KEY=secretaccountkey; export DATAMALL_ACCOUNT_KEY
 .Ed
+
+.Nm
+is intended for use in a shell startup script:
+.Pp
+.Dl eval \(dq$(shecrets < $HOME/.shecrets.toml)\(dq

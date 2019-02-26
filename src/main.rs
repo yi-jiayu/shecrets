@@ -45,11 +45,11 @@ fn walk(config: &Table) -> Vec<Var> {
     stack.push((Vec::new(), config));
     while let Some((prefix, table)) = stack.pop() {
         for (k, v) in table {
-            if k.starts_with("_") {
+            if k.starts_with('_') {
                 continue;
             }
             let mut prefix = prefix.to_owned();
-            prefix.push(&k);
+            prefix.push(k);
             match v {
                 Value::String(s) => vars.push(Var {
                     key: prefix,
@@ -72,12 +72,12 @@ fn walk(config: &Table) -> Vec<Var> {
                         .get(format!("_{}_separator", k).as_str())
                         .and_then(|v| v.as_str())
                         .unwrap_or(DEFAULT_ARRAY_SEP);
-                    ArrayValue::from_array(a, sep).map(|av| {
+                    if let Some(av) = ArrayValue::from_array(a, sep) {
                         vars.push(Var {
                             key: prefix,
                             value: Box::new(av),
                         })
-                    });
+                    }
                 }
                 Value::Table(t) => stack.push((prefix, t)),
                 _ => (),
@@ -95,7 +95,7 @@ fn format_posix(var: &Var) -> String {
     )
 }
 
-fn format_vars(vars: &Vec<Var>) -> Vec<String> {
+fn format_vars(vars: &[Var]) -> Vec<String> {
     vars.iter().map(|var| format_posix(var)).collect()
 }
 

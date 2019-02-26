@@ -43,8 +43,11 @@ fn walk(config: &Table) -> Vec<Var> {
     let mut stack: Vec<(Vec<&str>, &Table)> = Vec::new();
     let mut vars: Vec<Var> = Vec::new();
     stack.push((Vec::new(), config));
-    while let Some((prefix, value)) = stack.pop() {
-        for (k, v) in value {
+    while let Some((prefix, table)) = stack.pop() {
+        for (k, v) in table {
+            if k.starts_with("_") {
+                continue;
+            }
             let mut prefix = prefix.to_owned();
             prefix.push(&k);
             match v {
@@ -65,7 +68,11 @@ fn walk(config: &Table) -> Vec<Var> {
                     value: Box::new(b),
                 }),
                 Value::Array(a) => {
-                    ArrayValue::from_array(a, DEFAULT_ARRAY_SEP).map(|av| {
+                    let sep = table
+                        .get(format!("_{}_separator", k).as_str())
+                        .and_then(|v| v.as_str())
+                        .unwrap_or(DEFAULT_ARRAY_SEP);
+                    ArrayValue::from_array(a, sep).map(|av| {
                         vars.push(Var {
                             key: prefix,
                             value: Box::new(av),
@@ -149,19 +156,20 @@ mod tests {
 
     #[test]
     fn test() {
-        let config = r#"somefloatvar = 1.2
+        let toml_str = r#"somefloatvar = 1.2
 someintvar = 1
 someboolval = true
 somearrayval = ["abc","def"]
 [section]
+pipeseperatedarrayval = ["abc","def"]
+_pipeseperatedarrayval_separator = "|"
 nestedvar = "value2"
 [section.nested]
 doublynestedvar = "value3"
 [section2]
 nestedvar = "value4"
-"#
-        .parse::<Value>()
-        .unwrap();
+"#;
+        let config = toml_str.parse::<Value>().unwrap();
         let vars = walk(config.as_table().unwrap());
         let formatted = format_vars(&vars);
         assert_eq!(
@@ -173,6 +181,7 @@ nestedvar = "value4"
                 "SOMEINTVAR=1; export SOMEINTVAR",
                 "SECTION2_NESTEDVAR=value4; export SECTION2_NESTEDVAR",
                 "SECTION_NESTEDVAR=value2; export SECTION_NESTEDVAR",
+                "SECTION_PIPESEPERATEDARRAYVAL=abc|def; export SECTION_PIPESEPERATEDARRAYVAL",
                 "SECTION_NESTED_DOUBLYNESTEDVAR=value3; export SECTION_NESTED_DOUBLYNESTEDVAR",
             ]
         );
